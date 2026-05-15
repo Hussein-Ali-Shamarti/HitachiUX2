@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "QC1h9ksqcmwHz6maH8CXsWbr6OfkOx5oXO1owpj3XswaW7C9w8+u167S1TBBGhMR00JZX1bS0VThMBaPz71r1g==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\HusseinAl-Shamarti\\Downloads\\HitachiUX2\\HitachiUX2\\HitachiUX2.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.linux-arm.runtime.native.system.io.ports\\8.0.0\\runtime.linux-arm.runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.linux-arm64.runtime.native.system.io.ports\\8.0.0\\runtime.linux-arm64.runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.linux-x64.runtime.native.system.io.ports\\8.0.0\\runtime.linux-x64.runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.native.system.io.ports\\8.0.0\\runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.osx-arm64.runtime.native.system.io.ports\\8.0.0\\runtime.osx-arm64.runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\runtime.osx-x64.runtime.native.system.io.ports\\8.0.0\\runtime.osx-x64.runtime.native.system.io.ports.8.0.0.nupkg.sha512",
+    "C:\\Users\\HusseinAl-Shamarti\\.nuget\\packages\\system.io.ports\\8.0.0\\system.io.ports.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>HitachiUX2GUI</AssemblyName>
+    <RootNamespace>HitachiUX2GUI</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Referanse til SDK-prosjektet -->
+  <ItemGroup>
+    <ProjectReference Include="..\HitachiUX2\HitachiUX2.csproj" />
+  </ItemGroup>
+
+</Project>
