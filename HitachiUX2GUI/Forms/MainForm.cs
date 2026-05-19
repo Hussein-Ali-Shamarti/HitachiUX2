@@ -3,15 +3,8 @@ using HitachiUX2.Exceptions;
 
 namespace HitachiUX2GUI.Forms;
 
-/// <summary>
-/// Hoved-vinduet for Hitachi UX2-D160W Print Kontroll.
-///
-/// Fane 1: Send dato/tekst til eksisterende layout på skriveren.
-/// Fane 2: Bygg ny layout fra bunnen av og send til skriveren.
-/// </summary>
 public class MainForm : Form
 {
-    // ── Fargepalett ────────────────────────────────────────────────
     private static readonly Color BgColor      = Color.FromArgb(26, 26, 46);
     private static readonly Color PanelColor   = Color.FromArgb(22, 33, 62);
     private static readonly Color AccentColor  = Color.FromArgb(15, 52, 96);
@@ -22,46 +15,38 @@ public class MainForm : Form
     private static readonly Color TextColor    = Color.FromArgb(232, 234, 246);
     private static readonly Color SubtextColor = Color.FromArgb(144, 164, 174);
 
-    // ── Skriver-tilstand ───────────────────────────────────────────
     private HitachiUX2Printer? _printer;
     private bool               _connected;
 
-    // ── Layouts ────────────────────────────────────────────────────
-    private List<PrintLayout> _layouts = LayoutStorage.Load();
-    private List<PrintField>  _currentFields = [];
+    private Label       _statusLabel = new();
+    private Button      _connectBtn  = new();
+    private Button      _sendBtn     = new();
+    private RichTextBox _logBox      = new();
+    private TabControl  _tabs        = new();
 
-    // ── Felles kontroller ──────────────────────────────────────────
-    private Label  _statusLabel  = new();
-    private Button _connectBtn   = new();
-    private Button _sendBtn      = new();
-    private RichTextBox _logBox  = new();
-    private TabControl _tabs     = new();
+    private NumericUpDown  _date1Item    = new();
+    private ComboBox       _date1Format  = new();
+    private RadioButton    _date1Days    = new();
+    private RadioButton    _date1Manual  = new();
+    private NumericUpDown  _date1DaysSp  = new();
+    private DateTimePicker _date1Picker  = new();
+    private Label          _date1Preview = new();
 
-    // ── Fane 1: Send til layout ────────────────────────────────────
-    private NumericUpDown _jobNumber    = new();
-    private NumericUpDown _date1Item    = new();
-    private ComboBox      _date1Format  = new();
-    private RadioButton   _date1Days    = new();
-    private RadioButton   _date1Manual  = new();
-    private NumericUpDown _date1DaysSp  = new();
-    private DateTimePicker _date1Picker = new();
-    private Label         _date1Preview = new();
-
-    private CheckBox      _date2Enable  = new();
-    private NumericUpDown _date2Item    = new();
-    private ComboBox      _date2Format  = new();
-    private RadioButton   _date2Days    = new();
-    private RadioButton   _date2Manual  = new();
-    private NumericUpDown _date2DaysSp  = new();
-    private DateTimePicker _date2Picker = new();
-    private Label         _date2Preview = new();
+    private CheckBox       _date2Enable  = new();
+    private NumericUpDown  _date2Item    = new();
+    private ComboBox       _date2Format  = new();
+    private RadioButton    _date2Days    = new();
+    private RadioButton    _date2Manual  = new();
+    private NumericUpDown  _date2DaysSp  = new();
+    private DateTimePicker _date2Picker  = new();
+    private Label          _date2Preview = new();
 
     private readonly (NumericUpDown Item, TextBox Text)[] _extraFields = new (NumericUpDown, TextBox)[3];
 
-    // ── Fane 2: Bygg ny layout ─────────────────────────────────────
-    private TextBox   _layoutName   = new();
-    private ComboBox  _loadCombo    = new();
-    private FlowLayoutPanel _fieldList = new();
+    private NumericUpDown _jobNumber = new();
+
+    private Label           _fetchStatusLabel = new();
+    private FlowLayoutPanel _patternCards     = new();
 
     private static readonly string[] DateFormats =
     [
@@ -71,12 +56,12 @@ public class MainForm : Form
 
     public MainForm()
     {
-        Text            = "Hitachi UX2-D160W — Print Kontroll";
-        Size            = new Size(700, 900);
-        MinimumSize     = new Size(640, 750);
-        BackColor       = BgColor;
-        ForeColor       = TextColor;
-        StartPosition   = FormStartPosition.CenterScreen;
+        Text          = "Hitachi UX2-D160W — Print Kontroll";
+        Size          = new Size(700, 900);
+        MinimumSize   = new Size(640, 750);
+        BackColor     = BgColor;
+        ForeColor     = TextColor;
+        StartPosition = FormStartPosition.CenterScreen;
     }
 
     protected override void OnLoad(EventArgs e)
@@ -85,12 +70,9 @@ public class MainForm : Form
         BuildUI();
     }
 
-    // ── Bygg brukergrensesnitt ─────────────────────────────────────
-
     private void BuildUI()
     {
-        // Topptekst
-        var header = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = AccentColor };
+        var header   = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = AccentColor };
         var titleLbl = new Label
         {
             Text      = "HITACHI UX2-D160W",
@@ -105,16 +87,14 @@ public class MainForm : Form
             ForeColor = SubtextColor,
             AutoSize  = true,
         };
-        header.Controls.Add(titleLbl);
-        header.Controls.Add(subLbl);
+        header.Controls.AddRange([titleLbl, subLbl]);
         header.Layout += (_, _) =>
         {
             titleLbl.Location = new Point((header.Width - titleLbl.Width) / 2, 10);
             subLbl.Location   = new Point((header.Width - subLbl.Width) / 2, 45);
         };
 
-        // Statuslinje
-        var statusPanel = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = PanelColor };
+        var statusPanel     = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = PanelColor };
         var statusLblStatic = new Label
         {
             Text      = "STATUS:",
@@ -131,13 +111,12 @@ public class MainForm : Form
             Location  = new Point(80, 12),
             AutoSize  = true,
         };
-        _connectBtn = StyledButton("KOBLE TIL", BlueColor, BgColor);
-        _connectBtn.Dock   = DockStyle.Right;
-        _connectBtn.Width  = 120;
+        _connectBtn       = StyledButton("KOBLE TIL", BlueColor, BgColor);
+        _connectBtn.Dock  = DockStyle.Right;
+        _connectBtn.Width = 120;
         _connectBtn.Click += ConnectBtn_Click;
         statusPanel.Controls.AddRange([statusLblStatic, _statusLabel, _connectBtn]);
 
-        // Send-knapp (alltid synlig)
         _sendBtn = new Button
         {
             Text      = "⬆  SEND TIL SKRIVER",
@@ -153,7 +132,6 @@ public class MainForm : Form
         _sendBtn.FlatAppearance.BorderSize = 0;
         _sendBtn.Click += SendBtn_Click;
 
-        // Fane-system
         _tabs = new TabControl
         {
             Dock      = DockStyle.Fill,
@@ -161,46 +139,70 @@ public class MainForm : Form
             Font      = new Font("Courier New", 9, FontStyle.Bold),
         };
         _tabs.SelectedIndexChanged += (_, _) =>
-            _sendBtn.Text = _tabs.SelectedIndex == 0
-                ? "⬆  SEND TIL SKRIVER"
-                : "⬆  SEND NY LAYOUT TIL SKRIVER";
+            _sendBtn.Enabled = _tabs.SelectedIndex != 1 && _connected;
 
         var tab1 = new TabPage("  Send til layout  ") { BackColor = BgColor };
-        var tab2 = new TabPage("  Bygg ny layout  ")  { BackColor = BgColor };
+        var tab2 = new TabPage("  Mønstre  ")          { BackColor = BgColor };
         BuildTab1(tab1);
         BuildTab2(tab2);
         _tabs.TabPages.AddRange([tab1, tab2]);
 
-        // Loggvisning
         var logPanel = new Panel { Dock = DockStyle.Bottom, Height = 80, BackColor = PanelColor };
         _logBox = new RichTextBox
         {
-            Dock      = DockStyle.Fill,
-            BackColor = Color.FromArgb(13, 27, 42),
-            ForeColor = SubtextColor,
-            Font      = new Font("Courier New", 8),
-            ReadOnly  = true,
+            Dock        = DockStyle.Fill,
+            BackColor   = Color.FromArgb(13, 27, 42),
+            ForeColor   = SubtextColor,
+            Font        = new Font("Courier New", 8),
+            ReadOnly    = true,
             BorderStyle = BorderStyle.None,
         };
         logPanel.Controls.Add(_logBox);
 
-        // Separator-linjer
-        var sep1 = new Panel { Dock = DockStyle.Top, Height = 2, BackColor = AccentColor };
-        var sep2 = new Panel { Dock = DockStyle.Top, Height = 2, BackColor = AccentColor };
+        var jobPanel = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = PanelColor };
+        var jobLbl = new Label
+        {
+            Text      = "Jobb nr:",
+            Location  = new Point(14, 12),
+            AutoSize  = true,
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 9, FontStyle.Bold),
+        };
+        _jobNumber = new NumericUpDown
+        {
+            Location  = new Point(90, 8),
+            Size      = new Size(80, 28),
+            Minimum   = 1, Maximum = 2000,
+            Value     = 1,
+            BackColor = Color.FromArgb(13, 27, 42),
+            ForeColor = YellowColor,
+            Font      = new Font("Courier New", 13, FontStyle.Bold),
+        };
+        var jobHint = new Label
+        {
+            Text      = "Velg jobb/layout som skal oppdateres på skriveren",
+            Location  = new Point(185, 12),
+            AutoSize  = true,
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 8),
+        };
+        jobPanel.Controls.AddRange([jobLbl, _jobNumber, jobHint]);
+
+        var sep1 = new Panel { Dock = DockStyle.Top,    Height = 2, BackColor = AccentColor };
+        var sep2 = new Panel { Dock = DockStyle.Top,    Height = 2, BackColor = AccentColor };
         var sep3 = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = AccentColor };
 
-        // Legg til i riktig rekkefølge (Dock=Top bygger nedover)
+        // Dock=Top stacks downward, so controls must be added in reverse display order
         Controls.Add(_tabs);
         Controls.Add(sep2);
         Controls.Add(_sendBtn);
         Controls.Add(sep1);
+        Controls.Add(jobPanel);
         Controls.Add(statusPanel);
         Controls.Add(header);
         Controls.Add(sep3);
         Controls.Add(logPanel);
     }
-
-    // ── Fane 1: Send til eksisterende layout ──────────────────────
 
     private void BuildTab1(TabPage page)
     {
@@ -209,40 +211,60 @@ public class MainForm : Form
 
         int y = 10;
 
-        // Job-seksjon
-        AddSectionHeader(scroll, "JOB / LAYOUT", ref y);
-        var jobPanel = AddPanel(scroll, ref y, 60);
-        AddLabel(jobPanel, "Job-nummer (1–2000):", 10, 16);
-        _jobNumber = new NumericUpDown
+        AddSectionHeader(scroll, "SKRIVER-LAYOUT", ref y);
+        var layoutInfo = AddPanel(scroll, ref y, 90);
+        var layoutItems = new[]
         {
-            Location  = new Point(200, 14),
-            Size      = new Size(80, 28),
-            Minimum   = 1, Maximum = 2000, Value = 1,
-            BackColor = Color.FromArgb(13, 27, 42),
-            ForeColor = YellowColor,
-            Font      = new Font("Courier New", 11, FontStyle.Bold),
+            ("Item 1", "Produksjonsdato",   "dd.MM.yy"),
+            ("Item 2", "Best before-dato",  "dd.MM.yy"),
+            ("Item 3", "Fri tekst",         "f.eks. «Siste forbruksdag»"),
+            ("Item 4", "EFTA-logo",         "ikke send — fast innhold"),
         };
-        var recallBtn = StyledButton("Last inn job →", BlueColor, TextColor);
-        recallBtn.Location = new Point(290, 12);
-        recallBtn.Size     = new Size(140, 32);
-        recallBtn.Click   += RecallBtn_Click;
-        jobPanel.Controls.AddRange([_jobNumber, recallBtn]);
+        for (int i = 0; i < layoutItems.Length; i++)
+        {
+            var (item, label, hint) = layoutItems[i];
+            int xOff = (i % 2) * 300 + 10;
+            int yOff = (i / 2) * 38 + 8;
+            layoutInfo.Controls.Add(new Label
+            {
+                Text      = $"{item}:",
+                Location  = new Point(xOff, yOff),
+                Size      = new Size(55, 18),
+                ForeColor = YellowColor,
+                Font      = new Font("Courier New", 8, FontStyle.Bold),
+            });
+            layoutInfo.Controls.Add(new Label
+            {
+                Text      = label,
+                Location  = new Point(xOff + 58, yOff),
+                Size      = new Size(200, 18),
+                ForeColor = GreenColor,
+                Font      = new Font("Courier New", 8, FontStyle.Bold),
+            });
+            layoutInfo.Controls.Add(new Label
+            {
+                Text      = hint,
+                Location  = new Point(xOff, yOff + 18),
+                Size      = new Size(280, 16),
+                ForeColor = SubtextColor,
+                Font      = new Font("Courier New", 7),
+            });
+        }
 
-        // Dato 1
-        AddSectionHeader(scroll, "DATO 1", ref y);
+        AddSectionHeader(scroll, "DATO 1  →  Item 1  (produksjonsdato)", ref y);
         BuildDateBlock(scroll, ref y, "d1",
             ref _date1Item, ref _date1Format, ref _date1Days,
             ref _date1Manual, ref _date1DaysSp, ref _date1Picker, ref _date1Preview,
             optional: false);
 
-        // Dato 2
-        AddSectionHeader(scroll, "DATO 2  (valgfritt)", ref y);
+        AddSectionHeader(scroll, "DATO 2  →  Item 2  (best before)", ref y);
         var d2Panel = AddPanel(scroll, ref y, 20);
         _date2Enable = new CheckBox
         {
-            Text      = "Aktiver dato 2",
+            Text      = "Send dato 2",
             Location  = new Point(10, 0),
             AutoSize  = true,
+            Checked   = true,
             ForeColor = TextColor,
             Font      = new Font("Courier New", 10),
         };
@@ -253,9 +275,9 @@ public class MainForm : Form
             ref _date2Manual, ref _date2DaysSp, ref _date2Picker, ref _date2Preview,
             optional: true);
 
-        // Ekstra tekst-felt
-        AddSectionHeader(scroll, "EKSTRA TEKST-FELT  (valgfritt)", ref y);
-        var extraPanel = AddPanel(scroll, ref y, 100);
+        AddSectionHeader(scroll, "FRI TEKST  →  Item 3", ref y);
+        var extraPanel   = AddPanel(scroll, ref y, 100);
+        var extraDefaults = new (int item, string text)[] { (3, ""), (5, ""), (6, "") };
         for (int i = 0; i < 3; i++)
         {
             int yOff = 8 + i * 30;
@@ -265,7 +287,7 @@ public class MainForm : Form
                 Location  = new Point(55, yOff),
                 Size      = new Size(60, 28),
                 Minimum   = 1, Maximum = 50,
-                Value     = i + 3,
+                Value     = extraDefaults[i].item,
                 BackColor = Color.FromArgb(13, 27, 42),
                 ForeColor = YellowColor,
                 Font      = new Font("Courier New", 10, FontStyle.Bold),
@@ -275,6 +297,7 @@ public class MainForm : Form
             {
                 Location    = new Point(175, yOff),
                 Size        = new Size(220, 28),
+                Text        = extraDefaults[i].text,
                 BackColor   = Color.FromArgb(13, 27, 42),
                 ForeColor   = TextColor,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -283,6 +306,15 @@ public class MainForm : Form
             extraPanel.Controls.AddRange([itemSp, textBox]);
             _extraFields[i] = (itemSp, textBox);
         }
+
+        scroll.Controls.Add(new Label
+        {
+            Text      = "  Tip: skriv {Z/0}, {X/1} osv. for å referere til brukermønstre fra skriveren",
+            Location  = new Point(16, y),
+            Size      = new Size(560, 18),
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 8),
+        });
     }
 
     private void BuildDateBlock(
@@ -300,7 +332,7 @@ public class MainForm : Form
             Location  = new Point(160, 12),
             Size      = new Size(80, 28),
             Minimum   = 1, Maximum = 50,
-            Value     = prefix == "d1" ? 2 : 3,
+            Value     = prefix == "d1" ? 1 : 2,
             BackColor = Color.FromArgb(13, 27, 42),
             ForeColor = YellowColor,
             Font      = new Font("Courier New", 11, FontStyle.Bold),
@@ -356,15 +388,14 @@ public class MainForm : Form
 
         picker = new DateTimePicker
         {
-            Location   = new Point(160, 135),
-            Size       = new Size(200, 28),
-            Format     = DateTimePickerFormat.Short,
+            Location          = new Point(160, 135),
+            Size              = new Size(200, 28),
+            Format            = DateTimePickerFormat.Short,
             CalendarForeColor = YellowColor,
-            Visible    = false,
+            Visible           = false,
         };
         picker.ValueChanged += (_, _) => UpdatePreview(prefix);
 
-        // Forhåndsvisning
         var prevLbl = new Label
         {
             Text      = "Forhåndsvisning:",
@@ -381,12 +412,11 @@ public class MainForm : Form
             ForeColor = GreenColor,
         };
 
-        panel.Controls.AddRange([itemSp, formatCb, daysRb, manualRb,
-                                  daysSp, picker, prevLbl, preview]);
+        panel.Controls.AddRange([itemSp, formatCb, daysRb, manualRb, daysSp, picker, prevLbl, preview]);
 
         if (optional)
         {
-            // Flytt alle kontroller litt ned for checkbox-plass
+            // Shift everything down to make room for the "Send dato 2" checkbox above
             foreach (Control c in panel.Controls)
                 c.Top += 20;
         }
@@ -394,202 +424,186 @@ public class MainForm : Form
         UpdatePreview(prefix);
     }
 
-    // ── Fane 2: Bygg ny layout ─────────────────────────────────────
-
     private void BuildTab2(TabPage page)
     {
         var main = new Panel { Dock = DockStyle.Fill, BackColor = BgColor };
         page.Controls.Add(main);
 
-        // Topp: navn + lagre/last inn
-        var topPanel = new Panel { Dock = DockStyle.Top, Height = 94, BackColor = BgColor };
-        AddLabel(topPanel, "Layout-navn:", 16, 16);
-        _layoutName = new TextBox
+        var topPanel = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = BgColor };
+        var fetchBtn = StyledButton("Hent mønstre fra skriver", BlueColor, TextColor);
+        fetchBtn.Location = new Point(16, 11);
+        fetchBtn.Size     = new Size(220, 34);
+        fetchBtn.Click   += FetchPatterns_Click;
+        _fetchStatusLabel = new Label
         {
-            Location    = new Point(140, 14),
-            Size        = new Size(200, 28),
-            Text        = "Min layout",
-            BackColor   = Color.FromArgb(13, 27, 42),
-            ForeColor   = YellowColor,
-            BorderStyle = BorderStyle.FixedSingle,
-            Font        = new Font("Courier New", 10),
+            Text      = "Trykk for å hente mønstre lagret på skriveren",
+            Location  = new Point(248, 20),
+            AutoSize  = true,
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 9),
         };
-        var saveBtn = StyledButton("💾 Lagre", BlueColor, TextColor);
-        saveBtn.Location = new Point(350, 12);
-        saveBtn.Size     = new Size(100, 30);
-        saveBtn.Click   += SaveLayout_Click;
+        topPanel.Controls.AddRange([fetchBtn, _fetchStatusLabel]);
 
-        AddLabel(topPanel, "Last inn:", 16, 54);
-        _loadCombo = new ComboBox
+        var listHeader = new Label
         {
-            Location      = new Point(140, 52),
-            Size          = new Size(200, 28),
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            BackColor     = Color.FromArgb(13, 27, 42),
-            ForeColor     = YellowColor,
-            FlatStyle     = FlatStyle.Flat,
-            Font          = new Font("Courier New", 10),
-        };
-        RefreshLoadCombo();
-        var loadBtn = StyledButton("Last inn →", AccentColor, TextColor);
-        loadBtn.Location = new Point(350, 50);
-        loadBtn.Size     = new Size(100, 30);
-        loadBtn.Click   += LoadLayout_Click;
-        topPanel.Controls.AddRange([_layoutName, saveBtn, _loadCombo, loadBtn]);
-
-        // Seksjonstittel
-        var fieldHeader = new Label
-        {
-            Text      = "  FELT I LAYOUTEN",
+            Text      = "  FUNNET MØNSTRE  —  klikk «Kopier» for å kopiere referansen",
             Dock      = DockStyle.Top,
-            Height    = 28,
+            Height    = 26,
             BackColor = AccentColor,
             ForeColor = SubtextColor,
             Font      = new Font("Courier New", 9, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
         };
 
-        // Bunn: knapper
-        var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 46, BackColor = BgColor };
-        var addBtn = StyledButton("➕ Legg til felt", BlueColor, TextColor);
-        addBtn.Location = new Point(16, 6);
-        addBtn.Size     = new Size(150, 34);
-        addBtn.Click   += AddField_Click;
-        var clearBtn = StyledButton("🗑 Tøm alle", RedColor, TextColor);
-        clearBtn.Location = new Point(176, 6);
-        clearBtn.Size     = new Size(120, 34);
-        clearBtn.Click   += (_, _) =>
-        {
-            if (MessageBox.Show("Fjerne alle felt?", "Tøm", MessageBoxButtons.YesNo) == DialogResult.Yes)
-            {
-                _currentFields.Clear();
-                RefreshFieldList();
-            }
-        };
-        btnPanel.Controls.AddRange([addBtn, clearBtn]);
-
-        // Felt-liste fyller resten
-        _fieldList = new FlowLayoutPanel
+        _patternCards = new FlowLayoutPanel
         {
             Dock          = DockStyle.Fill,
             AutoScroll    = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents  = false,
             BackColor     = PanelColor,
+            Padding       = new Padding(4),
         };
 
-        // Rekkefølge for Dock: Fill først, Bottom, deretter Top (siste Top = øverst)
-        main.Controls.Add(_fieldList);
-        main.Controls.Add(btnPanel);
-        main.Controls.Add(fieldHeader);
+        main.Controls.Add(_patternCards);
+        main.Controls.Add(listHeader);
         main.Controls.Add(topPanel);
     }
 
-    // ── Oppdater felt-listen ───────────────────────────────────────
-
-    private void RefreshFieldList()
+    private async void FetchPatterns_Click(object? sender, EventArgs e)
     {
-        _fieldList.Controls.Clear();
+        if (!_connected) { ShowNotConnected(); return; }
 
-        if (_currentFields.Count == 0)
+        _fetchStatusLabel.Text = "Henter mønstre 0-19 (fast og fri) ...";
+        foreach (Panel p in _patternCards.Controls.OfType<Panel>())
+            foreach (PictureBox pb in p.Controls.OfType<PictureBox>())
+                pb.Image?.Dispose();
+        _patternCards.Controls.Clear();
+
+        var fixedResults = new List<(byte num, byte[] data)>();
+        var freeResults  = new List<(byte num, byte[] data)>();
+
+        await Task.Run(() =>
         {
-            _fieldList.Controls.Add(new Label
+            for (byte i = 0; i < 20; i++)
             {
-                Text      = "Ingen felt ennå — trykk 'Legg til felt'",
-                ForeColor = SubtextColor,
-                Font      = new Font("Courier New", 10),
-                AutoSize  = true,
-                Margin    = new Padding(10, 16, 0, 0),
-            });
-            return;
+                try
+                {
+                    var data = _printer!.GetUserPattern(i);
+                    if (data is { Length: > 0 })
+                        fixedResults.Add((i, data));
+                }
+                catch { }
+            }
+            for (byte i = 0; i < 20; i++)
+            {
+                try
+                {
+                    var data = _printer!.GetFreePattern(i);
+                    if (data is { Length: > 0 })
+                        freeResults.Add((i, data));
+                }
+                catch { }
+            }
+        });
+
+        if (fixedResults.Count > 0)
+        {
+            AddSectionDivider("FAST BRUKERMØNSTER  {X/N}  (attr 0x64)");
+            foreach (var (num, data) in fixedResults)
+                AddPatternCard(num, data, 'X');
+        }
+        if (freeResults.Count > 0)
+        {
+            AddSectionDivider("FRI BRUKERMØNSTER  {Z/N}  (attr 0x65)");
+            foreach (var (num, data) in freeResults)
+                AddPatternCard(num, data, 'Z');
         }
 
-        for (int i = 0; i < _currentFields.Count; i++)
-        {
-            var field = _currentFields[i];
-            var idx   = i;
-
-            var row = new Panel
-            {
-                Size      = new Size(610, 38),
-                BackColor = idx % 2 == 0 ? AccentColor : PanelColor,
-                Margin    = new Padding(0, 1, 0, 0),
-            };
-
-            row.Controls.Add(new Label
-            {
-                Text      = $"Item {idx + 1}:",
-                Location  = new Point(6, 10),
-                Size      = new Size(70, 20),
-                ForeColor = YellowColor,
-                Font      = new Font("Courier New", 9, FontStyle.Bold),
-            });
-            row.Controls.Add(new Label
-            {
-                Text      = field.Type.ToString(),
-                Location  = new Point(80, 10),
-                Size      = new Size(160, 20),
-                ForeColor = SubtextColor,
-                Font      = new Font("Courier New", 9),
-            });
-            row.Controls.Add(new Label
-            {
-                Text      = $"→ {field.Resolve()}",
-                Location  = new Point(245, 10),
-                Size      = new Size(180, 20),
-                ForeColor = GreenColor,
-                Font      = new Font("Courier New", 9, FontStyle.Bold),
-            });
-
-            // Handlingsknapper
-            var editBtn = SmallButton("✏", BlueColor);
-            editBtn.Location = new Point(540, 6);
-            editBtn.Click   += (_, _) => EditField(idx);
-
-            var delBtn = SmallButton("🗑", RedColor);
-            delBtn.Location = new Point(572, 6);
-            delBtn.Click   += (_, _) => { _currentFields.RemoveAt(idx); RefreshFieldList(); };
-
-            var upBtn = SmallButton("▲", AccentColor);
-            upBtn.Location = new Point(500, 6);
-            upBtn.Enabled  = idx > 0;
-            upBtn.Click   += (_, _) => MoveField(idx, -1);
-
-            var downBtn = SmallButton("▼", AccentColor);
-            downBtn.Location = new Point(520, 6);
-            downBtn.Enabled  = idx < _currentFields.Count - 1;
-            downBtn.Click   += (_, _) => MoveField(idx, 1);
-
-            row.Controls.AddRange([editBtn, delBtn, upBtn, downBtn]);
-            _fieldList.Controls.Add(row);
-        }
+        int total = fixedResults.Count + freeResults.Count;
+        _fetchStatusLabel.Text = total > 0
+            ? $"{fixedResults.Count} fast  +  {freeResults.Count} fri  mønster(e) funnet"
+            : "Ingen mønstre funnet på skriveren";
     }
 
-    private void MoveField(int idx, int dir)
+    private void AddSectionDivider(string text)
     {
-        var ni = idx + dir;
-        (_currentFields[idx], _currentFields[ni]) = (_currentFields[ni], _currentFields[idx]);
-        RefreshFieldList();
-    }
-
-    private void EditField(int idx)
-    {
-        using var dlg = new FieldEditorForm(_currentFields[idx]);
-        if (dlg.ShowDialog() == DialogResult.OK)
+        _patternCards.Controls.Add(new Label
         {
-            _currentFields[idx] = dlg.Result;
-            RefreshFieldList();
-        }
+            Text      = $"  {text}",
+            Size      = new Size(560, 24),
+            BackColor = AccentColor,
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 8, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin    = new Padding(0, 4, 0, 0),
+        });
     }
 
-    // ── Event handlers ─────────────────────────────────────────────
+    private void AddPatternCard(byte patternNum, byte[] data, char typeCode)
+    {
+        // Some printer responses include a 3-byte header [height, cols, patternNum] before the bitmap.
+        // Strip it when the length matches exactly so the preview renders correctly.
+        byte[] previewData = data;
+        if (data.Length >= 5 && data[0] is >= 7 and <= 16 && data[1] >= 1
+            && data.Length == 3 + data[1] * 2)
+            previewData = data[3..];
+        if (previewData.Length % 2 != 0)
+            previewData = data;
+
+        Bitmap bmp;
+        try   { bmp = PatternEncoder.Preview(previewData, scale: 5); }
+        catch { bmp = new Bitmap(1, PatternEncoder.DotHeight * 5); }
+
+        int cardH   = PatternEncoder.DotHeight * 5 + 42;
+        var card    = new Panel
+        {
+            Size      = new Size(560, cardH),
+            BackColor = patternNum % 2 == 0 ? AccentColor : PanelColor,
+            Margin    = new Padding(0, 1, 0, 0),
+        };
+        var refText = $"{{{typeCode}/{patternNum}}}";
+
+        card.Controls.Add(new Label
+        {
+            Text      = refText,
+            Location  = new Point(8, (cardH - 20) / 2),
+            Size      = new Size(72, 20),
+            ForeColor = YellowColor,
+            Font      = new Font("Courier New", 10, FontStyle.Bold),
+        });
+        card.Controls.Add(new PictureBox
+        {
+            Location    = new Point(86, 8),
+            Size        = new Size(Math.Clamp(previewData.Length / 2 * 5, 20, 340), PatternEncoder.DotHeight * 5),
+            BackColor   = Color.White,
+            BorderStyle = BorderStyle.FixedSingle,
+            SizeMode    = PictureBoxSizeMode.Zoom,
+            Image       = bmp,
+        });
+
+        var copyBtn = StyledButton($"Kopier {refText}", BlueColor, TextColor);
+        copyBtn.Location = new Point(440, 8);
+        copyBtn.Size     = new Size(110, 30);
+        copyBtn.Click   += (_, _) => { Clipboard.SetText(refText); Log($"Kopiert: {refText}"); };
+        card.Controls.Add(copyBtn);
+
+        card.Controls.Add(new Label
+        {
+            Text      = "Lim inn i tekst-felt\nunder 'Send til layout'",
+            Location  = new Point(440, 42),
+            Size      = new Size(110, 34),
+            ForeColor = SubtextColor,
+            Font      = new Font("Courier New", 7),
+        });
+
+        _patternCards.Controls.Add(card);
+    }
 
     private void ConnectBtn_Click(object? sender, EventArgs e)
     {
-        if (_connected)
-            Disconnect();
-        else
-            Connect();
+        if (_connected) Disconnect();
+        else Connect();
     }
 
     private void Connect()
@@ -598,13 +612,13 @@ public class MainForm : Form
         {
             _printer = new HitachiUX2Printer("192.168.0.250", useEnq: false);
             _printer.Connect();
-            _connected = true;
+            _connected             = true;
             _statusLabel.Text      = "  ● Tilkoblet (192.168.0.250)";
             _statusLabel.ForeColor = GreenColor;
             _connectBtn.Text       = "KOBLE FRA";
             _connectBtn.BackColor  = RedColor;
             _sendBtn.Enabled       = true;
-            Log("Tilkoblet 192.168.0.250:1024");
+            Log("Tilkoblet 192.168.0.250:44818");
         }
         catch (Exception ex)
         {
@@ -616,8 +630,8 @@ public class MainForm : Form
     private void Disconnect()
     {
         _printer?.Disconnect();
-        _printer   = null;
-        _connected = false;
+        _printer               = null;
+        _connected             = false;
         _statusLabel.Text      = "  ● Ikke tilkoblet";
         _statusLabel.ForeColor = RedColor;
         _connectBtn.Text       = "KOBLE TIL";
@@ -626,19 +640,26 @@ public class MainForm : Form
         Log("Frakoblet");
     }
 
-    private void RecallBtn_Click(object? sender, EventArgs e)
+    // Reconnects automatically if the printer closed the TCP session (e.g. after a pattern fetch).
+    private void RunWithAutoReconnect(Action action)
     {
-        if (!_connected) { ShowNotConnected(); return; }
         try
         {
-            _printer!.RecallPrintData((int)_jobNumber.Value);
-            Log($"Job #{_jobNumber.Value} lastet inn");
-            MessageBox.Show($"Job #{_jobNumber.Value} lastet inn!", "OK");
+            action();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
         {
-            MessageBox.Show(ex.Message, "Feil", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            Log($"FEIL: {ex.Message}");
+            Log("Tilkobling tapt — gjenoppretter ...");
+            try
+            {
+                _printer!.Reconnect();
+                Log("Gjenoppkoblet");
+            }
+            catch (Exception rex)
+            {
+                throw new IOException($"Gjenoppkobling feilet: {rex.Message}", rex);
+            }
+            action();
         }
     }
 
@@ -648,21 +669,23 @@ public class MainForm : Form
 
         try
         {
-            var items = _tabs.SelectedIndex == 0
-                ? BuildItemsFromTab1()
-                : BuildItemsFromTab2();
-
+            var items = BuildItemsFromTab1();
             if (items.Count == 0)
             {
                 MessageBox.Show("Ingen felt å sende!", "Tomt");
                 return;
             }
 
-            _printer!.SendPrintContent(items);
-            Log($"Sendt: {string.Join(", ", items.Select(x => $"Item {x.Key}: {x.Value}"))}");
+            int job = (int)_jobNumber.Value;
+            RunWithAutoReconnect(() =>
+            {
+                _printer!.RecallPrintData(job);
+                _printer!.SendPrintContent(items);
+            });
+            Log($"Jobb {job} sendt: {string.Join(", ", items.Select(x => $"Item {x.Key}: {x.Value}"))}");
 
             var summary = string.Join("\n", items.OrderBy(x => x.Key).Select(x => $"Item {x.Key}: {x.Value}"));
-            MessageBox.Show($"Skriveren ble oppdatert:\n\n{summary}", "✅ Sendt!");
+            MessageBox.Show($"Jobb {job} ble oppdatert:\n\n{summary}", "✅ Sendt!");
         }
         catch (PrinterNakException ex)
         {
@@ -680,14 +703,11 @@ public class MainForm : Form
     {
         var items = new Dictionary<int, string>();
 
-        // Dato 1
         items[(int)_date1Item.Value] = GetDateString("d1");
 
-        // Dato 2 (valgfri)
         if (_date2Enable.Checked)
             items[(int)_date2Item.Value] = GetDateString("d2");
 
-        // Ekstra felt
         foreach (var (itemSp, textBox) in _extraFields)
         {
             if (!string.IsNullOrWhiteSpace(textBox.Text))
@@ -697,64 +717,13 @@ public class MainForm : Form
         return items;
     }
 
-    private Dictionary<int, string> BuildItemsFromTab2()
-    {
-        if (_currentFields.Count == 0)
-            throw new InvalidOperationException("Ingen felt i layouten.");
-
-        return _currentFields
-            .Select((field, idx) => (idx + 1, field.Resolve()))
-            .ToDictionary(x => x.Item1, x => x.Item2);
-    }
-
-    private void AddField_Click(object? sender, EventArgs e)
-    {
-        using var dlg = new FieldEditorForm();
-        if (dlg.ShowDialog() == DialogResult.OK)
-        {
-            _currentFields.Add(dlg.Result);
-            RefreshFieldList();
-        }
-    }
-
-    private void SaveLayout_Click(object? sender, EventArgs e)
-    {
-        var name = _layoutName.Text.Trim();
-        if (string.IsNullOrEmpty(name)) { MessageBox.Show("Skriv inn layout-navn!"); return; }
-
-        var existing = _layouts.FirstOrDefault(l => l.Name == name);
-        if (existing is not null)
-            existing.Fields = [.. _currentFields];
-        else
-            _layouts.Add(new PrintLayout { Name = name, Fields = [.. _currentFields] });
-
-        LayoutStorage.Save(_layouts);
-        RefreshLoadCombo();
-        Log($"Layout '{name}' lagret ({_currentFields.Count} felt)");
-        MessageBox.Show($"Layout '{name}' er lagret.", "Lagret!");
-    }
-
-    private void LoadLayout_Click(object? sender, EventArgs e)
-    {
-        var name = _loadCombo.SelectedItem?.ToString();
-        if (name is null) return;
-        var layout = _layouts.FirstOrDefault(l => l.Name == name);
-        if (layout is null) return;
-        _currentFields = [.. layout.Fields];
-        _layoutName.Text = name;
-        RefreshFieldList();
-        Log($"Layout '{name}' lastet inn");
-    }
-
-    // ── Dato-hjelpemetoder ─────────────────────────────────────────
-
     private string GetDateString(string prefix)
     {
         var isD1   = prefix == "d1";
-        var days   = isD1 ? _date1DaysSp  : _date2DaysSp;
-        var manual = isD1 ? _date1Manual  : _date2Manual;
-        var picker = isD1 ? _date1Picker  : _date2Picker;
-        var format = isD1 ? _date1Format  : _date2Format;
+        var days   = isD1 ? _date1DaysSp : _date2DaysSp;
+        var manual = isD1 ? _date1Manual : _date2Manual;
+        var picker = isD1 ? _date1Picker : _date2Picker;
+        var format = isD1 ? _date1Format : _date2Format;
 
         var fmt = format.SelectedItem?.ToString() ?? "dd.MM.yy";
         return manual.Checked
@@ -764,33 +733,26 @@ public class MainForm : Form
 
     private void UpdatePreview(string prefix)
     {
+        var preview = prefix == "d1" ? _date1Preview : _date2Preview;
+        if (preview is null) return;
         try
         {
-            var value   = GetDateString(prefix);
-            var preview = prefix == "d1" ? _date1Preview : _date2Preview;
-            if (preview is not null)
-            {
-                preview.Text      = value;
-                preview.ForeColor = GreenColor;
-            }
+            preview.Text      = GetDateString(prefix);
+            preview.ForeColor = GreenColor;
         }
         catch
         {
-            var preview = prefix == "d1" ? _date1Preview : _date2Preview;
-            if (preview is not null)
-            {
-                preview.Text      = "Ugyldig dato!";
-                preview.ForeColor = RedColor;
-            }
+            preview.Text      = "Ugyldig dato!";
+            preview.ForeColor = RedColor;
         }
     }
 
     private void ToggleDateMode(string prefix)
     {
         var isD1   = prefix == "d1";
-        var days   = isD1 ? _date1DaysSp  : _date2DaysSp;
-        var picker = isD1 ? _date1Picker  : _date2Picker;
-        var manual = isD1 ? _date1Manual  : _date2Manual;
+        var days   = isD1 ? _date1DaysSp : _date2DaysSp;
+        var picker = isD1 ? _date1Picker : _date2Picker;
+        var manual = isD1 ? _date1Manual : _date2Manual;
 
         days.Visible   = !manual.Checked;
         picker.Visible = manual.Checked;
@@ -798,22 +760,13 @@ public class MainForm : Form
 
     private void UpdateDate2Enabled()
     {
-        var enabled = _date2Enable.Checked;
-        foreach (Control c in _date2Item.Parent?.Controls ?? new Control.ControlCollection(null))
+        var enabled  = _date2Enable.Checked;
+        var controls = _date2Item.Parent?.Controls;
+        if (controls is null) return;
+        foreach (Control c in controls)
             if (c != _date2Enable)
                 c.Enabled = enabled;
     }
-
-    // ── Layout-hjelp ───────────────────────────────────────────────
-
-    private void RefreshLoadCombo()
-    {
-        _loadCombo.Items.Clear();
-        foreach (var l in _layouts)
-            _loadCombo.Items.Add(l.Name);
-    }
-
-    // ── UI-hjelpemetoder ───────────────────────────────────────────
 
     private void Log(string message)
     {
@@ -874,17 +827,6 @@ public class MainForm : Form
         Font      = new Font("Courier New", 9, FontStyle.Bold),
         Cursor    = Cursors.Hand,
         Height    = 32,
-    };
-
-    private static Button SmallButton(string text, Color bg) => new()
-    {
-        Text      = text,
-        Size      = new Size(28, 26),
-        BackColor = bg,
-        ForeColor = TextColor,
-        FlatStyle = FlatStyle.Flat,
-        Font      = new Font("Courier New", 9),
-        Cursor    = Cursors.Hand,
     };
 
     protected override void OnFormClosed(FormClosedEventArgs e)

@@ -53,14 +53,12 @@ TemporaryDependencyNodeTargetIdentifier=net8.0-windows
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
-Forms/
- FieldEditorForm.cs
- MainForm.cs
-Models.cs
+Forms/MainForm.cs
 obj/Debug/net8.0-windows/
  .NETCoreApp,Version=v8.0.AssemblyAttributes.cs
  HitachiUX2GUI.AssemblyInfo.cs
  HitachiUX2GUI.GlobalUsings.g.cs
+PatternEncoder.cs
 Program.cs
 
 [metadataReferences]

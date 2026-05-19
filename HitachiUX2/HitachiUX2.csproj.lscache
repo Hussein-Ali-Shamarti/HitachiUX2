@@ -45,7 +45,7 @@ TemporaryDependencyNodeTargetIdentifier=net8.0
 /optimize-
 /out:obj\Debug\net8.0\HitachiUX2.dll
 /refout:obj\Debug\net8.0\refint\HitachiUX2.dll
-/target:exe
+/target:library
 /warnaserror-
 /utf8output
 /deterministic+
@@ -59,10 +59,9 @@ obj/Debug/net8.0/
  .NETCoreApp,Version=v8.0.AssemblyAttributes.cs
  HitachiUX2.AssemblyInfo.cs
  HitachiUX2.GlobalUsings.g.cs
-Program.cs
 Protocol/ProtocolConstants.cs
 Transport/
- EthernetTransport.cs
+ EtherNetIPTransport.cs
  ITransport.cs
  SerialTransport.cs
 
